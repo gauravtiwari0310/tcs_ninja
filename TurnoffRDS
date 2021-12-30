@@ -1,0 +1,37 @@
+## Lambda needs to be triggered using two crons one on Saturday and other on Monday from which it should be available
+
+import json
+import boto3
+from datetime import datetime, timedelta, date
+
+datetoday = datetime.now()
+day_week =datetoday.strftime("%A")
+
+tag_to_check= {'Key':'admin_contact', 'Value': 'gaurav_tiwari'} ##Change the value of the 'Key' and 'Value' according to your needs
+
+def describe_dbs():
+    client = boto3.client('rds')
+
+    response = client.describe_db_instances()
+    db_instances=[]
+    for instance in response['DBInstances']:
+        db_instance_tags = client.list_tags_for_resource(ResourceName=instance['DBInstanceArn'])['TagList']
+        db_instances+=[ instance['DBInstanceIdentifier'] for tag in db_instance_tags if (tag['Key']==tag_to_check['Key'] and tag['Value']==tag_to_check['Value']) ]
+    return db_instances
+    
+
+def start_db():
+    for rds_inst in describe_dbs():
+        response = client.start_db_instance(DBInstanceIdentifier=rds)
+    
+def stop_db():
+    for rds_inst in describe_dbs():
+        response = client.stop_db_instance(DBInstanceIdentifier=rds)
+        
+
+def lambda_handler(event, context):
+    if day_week=='Saturday':
+        stop_db()
+    if day_week=='Monday':
+        start_db()
+    
