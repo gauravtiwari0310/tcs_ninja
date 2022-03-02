@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Python Lambda to create quicksight dasboard
+Resources:
+  rAWSLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      FunctionName: quicksight-CreateDshbrd
+      Description: Lambda function to create quicksight Dashboard
+      Handler: index.handler
+      Runtime: python3.7
+      Code:
+        ZipFile: |
+          #!/usr/bin/python
+          ################################################################################
+          ####
+          ####  NAME: quicksight-CreateDshbrd
+          ####
+          ####  PURPOSE: This Python-based AWS Lambda function will create a quicksight dashboard
+          ####           from and existing dashboard template.
+          ################################################################################
+          #  CHANGE HISTORY:
+          #
+          #  VERS  DATE         PGMR NAME         DESCRIPTION OF CHANGE
+          #  ----  -----------  -------------- -------------------------------------------
+          #  1.0   28-Jun-2020  Gaurav Tiwari    Initial Version
+          #
+          ################################################################################
+          #
+          ################################################################################
+          import json
+          import boto3
+          import botocore
+          import time
+          def lambda_handler(event, context):
+              region = event['region']
+              usrRegion = event['usrRegion']
+              service = event['service']
+              ins_typ = event['ins_typ']
+              list_cmd = event['list_cmd']
+              desc_cmd = event['desc_cmd']
+              create_cmd = event['create_cmd']
+              pAwsAccId = event['pAwsAccId']
+              pNewDshbrdId = event['pNewDshbrdId']
+              pNewDshbrdNm = event['pNewDshbrdNm']
+              pSrcTmpltId = event['pSrcTmpltId']
+              pSrcDatasetId = event['pSrcDatasetId']
+              pAwsUserId = event['pAwsUserId']
+              
+              pAccARN=f"arn:aws:quicksight:{region}:{pAwsAccId}"
+              pSrcTmpltARN=f"{pAccARN}:template/{pSrcTmpltId}"
+              pSrcDatasetARN=f"{pAccARN}:dataset/{pSrcDatasetId}"
+              pUserARN=f"arn:aws:quicksight:{usrRegion}:{pAwsAccId}:user/default/{pAwsUserId}"
+
+              pSourceEntity = {
+                  'SourceTemplate': {
+                          'Arn': pSrcTmpltARN, 
+                          'DataSetReferences': [
+                                  {
+                                      'DataSetPlaceholder':'String',
+                                      'DataSetArn':pSrcDatasetARN
+                                  },
+                              ]
+                      }
+              }
+              
+              pPermissions = [
+                  {
+                      "Principal": pUserARN,
+                      "Actions": [
+                          "quicksight:DescribeDashboard",
+                          "quicksight:ListDashboardVersions",
+                          "quicksight:UpdateDashboardPermissions",
+                          "quicksight:QueryDashboard",
+                          "quicksight:UpdateDashboard",
+                          "quicksight:DeleteDashboard",
+                          "quicksight:DescribeDashboardPermissions",
+                          "quicksight:UpdateDashboardPublishedVersion"
+                      ]
+                  }
+              ]
+                  
+              print(pSourceEntity)
+              
+              client = boto3.client(service,region_name=region)
+              
+              response1 = getattr(client,create_cmd)(
+                  AwsAccountId = pAwsAccId,
+                  DashboardId = pNewDshbrdId,
+                  Name = pNewDshbrdNm,
+                  Permissions = pPermissions,
+                  SourceEntity = pSourceEntity
+                  
+              )
+              
+              print (response1)
+              print ('Your dashboard is being created...')
+              
+              time.sleep(1)
+              
+              response2 = getattr(client,desc_cmd)(
+                  AwsAccountId = pAwsAccId,
+                  DashboardId = pNewDshbrdId,
+              )
+              
+              print (response2)
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Hello from Lambda!')
+              }
+      Role: 'arn:aws:iam::578225969089:role/EIP_Quicksight_Lambda_Service_Role'
+      Tags:
+        - Key: Name
+          Value: quicksight-CreateDshbrd
+        - Key: Purpose
+          Value: Py Lambda to creat quickSight dashboard
+        - Key: Language
+          Value: Python 3.7
+        - Key: SourceCode
+          Value: In House
